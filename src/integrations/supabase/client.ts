@@ -24,28 +24,29 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
   };
 }
 
+const rawUrl =
+  (typeof import.meta !== "undefined" && import.meta.env?.["VITE_SUPABASE_URL"]) ||
+  process.env["VITE_SUPABASE_URL"] ||
+  process.env["SUPABASE_URL"];
+
+const rawAnonKey =
+  (typeof import.meta !== "undefined" && import.meta.env?.["VITE_SUPABASE_ANON_KEY"]) ||
+  (typeof import.meta !== "undefined" && import.meta.env?.["VITE_SUPABASE_PUBLISHABLE_KEY"]) ||
+  process.env["VITE_SUPABASE_ANON_KEY"] ||
+  process.env["VITE_SUPABASE_PUBLISHABLE_KEY"] ||
+  process.env["SUPABASE_ANON_KEY"] ||
+  process.env["SUPABASE_PUBLISHABLE_KEY"];
+
+export const isSupabaseConfigured = Boolean(rawUrl && rawAnonKey);
+
 function createSupabaseClient() {
-  const SUPABASE_URL =
-    (typeof import.meta !== "undefined" && import.meta.env?.["VITE_SUPABASE_URL"]) ||
-    process.env["VITE_SUPABASE_URL"] ||
-    process.env["SUPABASE_URL"];
+  const SUPABASE_URL = rawUrl || "https://placeholder-project.supabase.co";
+  const SUPABASE_ANON_KEY = rawAnonKey || "placeholder-anon-key";
 
-  const SUPABASE_ANON_KEY =
-    (typeof import.meta !== "undefined" && import.meta.env?.["VITE_SUPABASE_ANON_KEY"]) ||
-    (typeof import.meta !== "undefined" && import.meta.env?.["VITE_SUPABASE_PUBLISHABLE_KEY"]) ||
-    process.env["VITE_SUPABASE_ANON_KEY"] ||
-    process.env["VITE_SUPABASE_PUBLISHABLE_KEY"] ||
-    process.env["SUPABASE_ANON_KEY"] ||
-    process.env["SUPABASE_PUBLISHABLE_KEY"];
-
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    const missing = [
-      ...(!SUPABASE_URL ? ["VITE_SUPABASE_URL / SUPABASE_URL"] : []),
-      ...(!SUPABASE_ANON_KEY ? ["VITE_SUPABASE_ANON_KEY / VITE_SUPABASE_PUBLISHABLE_KEY"] : []),
-    ];
-    const message = `Missing Supabase environment variable(s): ${missing.join(", ")}. Please configure your database credentials in .env.`;
-    console.error(`[Database Configuration] ${message}`);
-    throw new Error(message);
+  if (!isSupabaseConfigured) {
+    console.warn(
+      "[Database Configuration] Supabase environment variables are missing. Please configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your hosting dashboard (e.g. Vercel).",
+    );
   }
 
   const client = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -61,14 +62,18 @@ function createSupabaseClient() {
 
   if (typeof window !== "undefined") {
     // Keep cookie in sync so server functions & SSR always have access
-    client.auth.onAuthStateChange((_event, session) => {
-      const token = session?.access_token;
-      if (token) {
-        document.cookie = `sb-access-token=${token}; Path=/; SameSite=Lax; Max-Age=604800`;
-      } else {
-        document.cookie = `sb-access-token=; Path=/; SameSite=Lax; Max-Age=0`;
-      }
-    });
+    try {
+      client.auth.onAuthStateChange((_event, session) => {
+        const token = session?.access_token;
+        if (token) {
+          document.cookie = `sb-access-token=${token}; Path=/; SameSite=Lax; Max-Age=604800`;
+        } else {
+          document.cookie = `sb-access-token=; Path=/; SameSite=Lax; Max-Age=0`;
+        }
+      });
+    } catch {
+      // safe fallback if storage is unconfigured
+    }
   }
 
   return client;

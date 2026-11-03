@@ -57,13 +57,8 @@ export const requireSupabaseAuth = createMiddleware({ type: "function" })
       process.env["SUPABASE_ANON_KEY"];
 
     if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-      const missing = [
-        ...(!SUPABASE_URL ? ["SUPABASE_URL"] : []),
-        ...(!SUPABASE_PUBLISHABLE_KEY ? ["SUPABASE_PUBLISHABLE_KEY"] : []),
-      ];
-      const message = `Missing Supabase environment variable(s): ${missing.join(", ")}. Please configure your database credentials in .env.`;
-      console.error(`[Database Configuration] ${message}`);
-      throw new Error(message);
+      console.warn("[Database Configuration] Missing Supabase environment variables in server context.");
+      throw new Error("UNCONFIGURED: Database credentials missing in hosting environment. Please add them in Vercel settings.");
     }
 
     let token: string | null = null;

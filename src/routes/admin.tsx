@@ -36,7 +36,7 @@ import {
   Sliders,
   Edit3,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 import {
   getAdminStatus,
   listSubmissions,
@@ -256,6 +256,11 @@ function AdminPage() {
   }
 
   useEffect(() => {
+    if (!isSupabaseConfigured) {
+      setLoading(false);
+      return;
+    }
+
     checkAuthAndRole();
 
     const {
@@ -271,7 +276,7 @@ function AdminPage() {
     });
 
     return () => {
-      subscription.unsubscribe();
+      subscription?.unsubscribe();
     };
   }, []);
 
@@ -688,8 +693,51 @@ function AdminPage() {
       </div>
 
       <div className="relative mx-auto max-w-6xl px-6 pt-8">
+        {/* State 0: Unconfigured Environment on Vercel */}
+        {!isSupabaseConfigured && (
+          <div className="mx-auto mt-8 max-w-xl rounded-3xl border border-amber-500/30 bg-amber-500/5 p-8 text-center shadow-soft">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600">
+              <ShieldAlert className="h-6 w-6" />
+            </div>
+            <h2 className="font-display text-xl font-bold text-navy">Connect Database to Vercel</h2>
+            <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+              Your website is live on Vercel, but your Supabase environment variables haven't been added to your Vercel Project Settings yet.
+            </p>
+
+            <div className="mt-6 rounded-2xl border border-border/80 bg-card p-5 text-left font-mono text-[0.72rem] space-y-2.5">
+              <div className="text-muted-foreground font-sans font-medium text-xs border-b border-border/50 pb-2">
+                Add these in Vercel &rarr; Settings &rarr; Environment Variables:
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 py-1 border-b border-border/30">
+                <span className="text-navy font-semibold">VITE_SUPABASE_URL</span>
+                <span className="text-ocean break-all select-all">https://your-project.supabase.co</span>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 py-1 border-b border-border/30">
+                <span className="text-navy font-semibold">VITE_SUPABASE_ANON_KEY</span>
+                <span className="text-muted-foreground break-all select-all">your-anon-or-publishable-key</span>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 py-1 border-b border-border/30">
+                <span className="text-navy font-semibold">SUPABASE_URL</span>
+                <span className="text-ocean break-all select-all">https://your-project.supabase.co</span>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 py-1 border-b border-border/30">
+                <span className="text-navy font-semibold">SUPABASE_PUBLISHABLE_KEY</span>
+                <span className="text-muted-foreground break-all select-all">your-anon-or-publishable-key</span>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 py-1">
+                <span className="text-navy font-semibold">SUPABASE_SERVICE_ROLE_KEY</span>
+                <span className="text-muted-foreground break-all select-all">your-service-role-secret-key</span>
+              </div>
+            </div>
+
+            <p className="mt-5 text-[0.72rem] text-muted-foreground">
+              After adding them, go to the <strong>Deployments</strong> tab in Vercel and click <strong>Redeploy</strong>.
+            </p>
+          </div>
+        )}
+
         {/* State 1: Loading Session */}
-        {loading && (
+        {isSupabaseConfigured && loading && (
           <div className="flex flex-col items-center justify-center py-24 space-y-4">
             <RefreshCw className="h-8 w-8 animate-spin text-ocean" />
             <p className="text-xs text-muted-foreground font-mono">Verifying operator credentials...</p>
@@ -697,7 +745,7 @@ function AdminPage() {
         )}
 
         {/* State 2: Not Signed In */}
-        {!loading && !sessionUser && (
+        {isSupabaseConfigured && !loading && !sessionUser && (
           <div className="mx-auto mt-12 max-w-md">
             <div className="rounded-3xl border border-border bg-card p-8 shadow-lift">
               <div className="text-center">
