@@ -24,7 +24,7 @@ import {
   Edit3,
 } from "lucide-react";
 import { PageHero, SectionHeading, Reveal, Eyebrow } from "@/components/site/primitives";
-import { listJobPostings, submitJobApplication, type JobPosting, DEFAULT_JOB_POSTINGS } from "@/lib/jobs.functions";
+import { listJobPostings, submitJobApplication, uploadResumeFile, type JobPosting, DEFAULT_JOB_POSTINGS } from "@/lib/jobs.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,6 +57,7 @@ function CareersApplyPage() {
   const search = useSearch({ from: "/careers/apply" });
   const getJobsFn = useServerFn(listJobPostings);
   const submitAppFn = useServerFn(submitJobApplication);
+  const uploadResumeFn = useServerFn(uploadResumeFile);
 
   const [jobs, setJobs] = useState<JobPosting[]>(DEFAULT_JOB_POSTINGS);
   const [loadingJobs, setLoadingJobs] = useState(true);
@@ -184,24 +185,38 @@ function CareersApplyPage() {
     setUploadingResume(true);
 
     try {
-      const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-      const filePath = `candidates/${Date.now()}-${cleanName}`;
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          const res = reader.result as string;
+          const base64 = res.split(",")[1];
+          if (base64) resolve(base64);
+          else reject(new Error("Failed to encode resume file."));
+        };
+        reader.onerror = () => reject(new Error("File read error"));
+      });
+      reader.readAsDataURL(file);
+      const fileBase64 = await base64Promise;
 
-      const { data, error } = await supabase.storage.from("resumes").upload(filePath, file, {
-        cacheControl: "3600",
-        upsert: false,
+      const uploadRes = await uploadResumeFn({
+        data: {
+          fileName: file.name,
+          fileBase64,
+          contentType: file.type || "application/pdf",
+        },
       });
 
-      if (error) {
-        console.warn("Storage upload warning, using local placeholder:", error.message);
-        setResumeUrl(`https://storage.quietoralabs.com/resumes/${filePath}`);
-      } else if (data?.path) {
-        const { data: publicUrlData } = supabase.storage.from("resumes").getPublicUrl(data.path);
-        setResumeUrl(publicUrlData.publicUrl);
+      if (uploadRes && uploadRes.ok && uploadRes.url) {
+        setResumeUrl(uploadRes.url);
+      } else {
+        throw new Error("Did not receive a valid file URL.");
       }
     } catch (err: unknown) {
       console.error("Resume upload exception:", err);
-      setResumeUrl(`uploaded:${file.name}`);
+      const msg = err instanceof Error ? err.message : "Upload failed";
+      setUploadError(`${msg}. Please try again or paste a Google Drive/Dropbox link in your portfolio field.`);
+      setResumeFile(null);
+      setResumeFilename("");
     } finally {
       setUploadingResume(false);
     }

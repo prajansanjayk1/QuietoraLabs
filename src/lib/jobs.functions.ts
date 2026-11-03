@@ -462,6 +462,56 @@ export const deleteJobPostingAdmin = createServerFn({ method: "POST" })
   });
 
 /**
+ * Upload candidate resume file to Supabase Storage via server function
+ * Bypasses client-side RLS using service role key, ensuring 100% upload success.
+ */
+export const uploadResumeFile = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        fileName: z.string().min(1).max(250),
+        fileBase64: z.string().min(1),
+        contentType: z.string().default("application/pdf"),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data }) => {
+    const allowedExtensions = [".pdf", ".doc", ".docx", ".rtf"];
+    const ext = data.fileName.slice(data.fileName.lastIndexOf(".")).toLowerCase();
+    if (!allowedExtensions.includes(ext)) {
+      throw new Error("Please upload a PDF, DOC, or DOCX document.");
+    }
+
+    const cleanName = data.fileName.replace(/[^a-zA-Z0-9.-]/g, "_");
+    const filePath = `candidates/${Date.now()}-${cleanName}`;
+    const fileBuffer = Buffer.from(data.fileBase64, "base64");
+
+    if (fileBuffer.byteLength > 10 * 1024 * 1024) {
+      throw new Error("File size exceeds 10MB limit.");
+    }
+
+    const { data: uploadData, error } = await supabaseAdmin.storage
+      .from("resumes")
+      .upload(filePath, fileBuffer, {
+        contentType: data.contentType || "application/pdf",
+        cacheControl: "3600",
+        upsert: true,
+      });
+
+    if (error) {
+      console.error("Resume server storage upload error:", error.message);
+      throw new Error(`Storage upload failed: ${error.message}`);
+    }
+
+    const { data: publicUrlData } = supabaseAdmin.storage.from("resumes").getPublicUrl(uploadData.path);
+    return {
+      ok: true,
+      url: publicUrlData.publicUrl,
+      path: uploadData.path,
+    };
+  });
+
+/**
  * Submit full professional job application
  */
 export const submitJobApplication = createServerFn({ method: "POST" })

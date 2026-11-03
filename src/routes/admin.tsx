@@ -1471,7 +1471,7 @@ function AdminPage() {
                               <span className="font-semibold text-emerald-700">{expectedCtc || "Flexible"}</span>
                             </div>
                             <div className="rounded-xl border border-border/60 bg-secondary/20 p-2.5 flex items-center justify-center">
-                              {resumeUrl ? (
+                              {resumeUrl && !resumeUrl.includes("storage.quietoralabs.com") && resumeUrl.startsWith("http") ? (
                                 <a
                                   href={resumeUrl}
                                   target="_blank"
@@ -1480,6 +1480,13 @@ function AdminPage() {
                                 >
                                   <FileText className="h-4 w-4" /> View Resume (PDF)
                                 </a>
+                              ) : resumeUrl && resumeUrl.includes("storage.quietoralabs.com") ? (
+                                <span
+                                  className="text-[0.7rem] text-amber-700 dark:text-amber-300 font-medium text-center"
+                                  title="Original file failed client upload. Review candidate's portfolio or LinkedIn below."
+                                >
+                                  Resume link unavailable (check links below)
+                                </span>
                               ) : (
                                 <span className="text-muted-foreground text-[0.7rem]">No Resume Link</span>
                               )}
