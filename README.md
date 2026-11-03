@@ -151,6 +151,5 @@ npm test
 ---
 
 ## License
+[![OpenRepos](https://img.shields.io/endpoint?url=https://openrepos.org/status/quietoralabs.openrepos.org.json&style=flat-square)](https://quietoralabs.openrepos.org/)
 
-Copyright © 2026 QuietoraLabs. All rights reserved.
-Proprietary software and design assets.
