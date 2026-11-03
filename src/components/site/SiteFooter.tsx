@@ -83,7 +83,7 @@ export function SiteFooter() {
         ))}
       </div>
       <div className="container-q relative flex flex-col gap-2 border-t border-navy-foreground/10 py-6 text-xs text-navy-foreground/50 md:flex-row md:justify-between">
-        <p>© {new Date().getFullYear()} QuietoraLabs. Made in India.</p>
+        <p>© 2026 QuietoraLabs. Made in India.</p>
         <p>Products shown are in development or exploration. Nothing here is a live service yet.</p>
       </div>
     </footer>

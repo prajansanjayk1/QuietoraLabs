@@ -100,6 +100,7 @@ function AdminPage() {
   const saveJobAdminFn = useServerFn(saveJobPostingAdmin);
   const deleteJobAdminFn = useServerFn(deleteJobPostingAdmin);
 
+  const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sessionUser, setSessionUser] = useState<{ id: string; email: string } | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -256,6 +257,7 @@ function AdminPage() {
   }
 
   useEffect(() => {
+    setMounted(true);
     if (!isSupabaseConfigured) {
       setLoading(false);
       return;
@@ -673,12 +675,12 @@ function AdminPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            {sessionUser && (
+            {mounted && sessionUser && (
               <span className="hidden sm:inline-block text-xs font-mono text-muted-foreground">
                 {sessionUser.email}
               </span>
             )}
-            {sessionUser && (
+            {mounted && sessionUser && (
               <Button
                 variant="outline"
                 size="sm"
@@ -693,8 +695,16 @@ function AdminPage() {
       </div>
 
       <div className="relative mx-auto max-w-6xl px-6 pt-8">
+        {/* Loading / Mounting Session */}
+        {(!mounted || loading) && (
+          <div className="flex flex-col items-center justify-center py-24 space-y-4">
+            <RefreshCw className="h-8 w-8 animate-spin text-ocean" />
+            <p className="text-xs text-muted-foreground font-mono">Verifying operator credentials...</p>
+          </div>
+        )}
+
         {/* State 0: Unconfigured Environment on Vercel */}
-        {!isSupabaseConfigured && (
+        {mounted && !isSupabaseConfigured && (
           <div className="mx-auto mt-8 max-w-xl rounded-3xl border border-amber-500/30 bg-amber-500/5 p-8 text-center shadow-soft">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600">
               <ShieldAlert className="h-6 w-6" />
@@ -736,16 +746,10 @@ function AdminPage() {
           </div>
         )}
 
-        {/* State 1: Loading Session */}
-        {isSupabaseConfigured && loading && (
-          <div className="flex flex-col items-center justify-center py-24 space-y-4">
-            <RefreshCw className="h-8 w-8 animate-spin text-ocean" />
-            <p className="text-xs text-muted-foreground font-mono">Verifying operator credentials...</p>
-          </div>
-        )}
+
 
         {/* State 2: Not Signed In */}
-        {isSupabaseConfigured && !loading && !sessionUser && (
+        {mounted && isSupabaseConfigured && !loading && !sessionUser && (
           <div className="mx-auto mt-12 max-w-md">
             <div className="rounded-3xl border border-border bg-card p-8 shadow-lift">
               <div className="text-center">
